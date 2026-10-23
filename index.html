@@ -1,0 +1,856 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Madilu IoT — Cloud Command Center V6.5 Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      --bg: #090d16;
+      --clay-surface: #121929;
+      --clay-shadow-out: 8px 8px 18px rgba(3, 5, 10, 0.8), -6px -6px 14px rgba(30, 42, 70, 0.25);
+      --clay-shadow-inset: inset 2px 2px 4px rgba(255, 255, 255, 0.05), inset -3px -3px 6px rgba(0, 0, 0, 0.6);
+      --clay-pressed: inset 4px 4px 8px rgba(0, 0, 0, 0.8), inset -2px -2px 4px rgba(255, 255, 255, 0.05);
+      --accent: #38bdf8;
+      --accent-glow: 0 0 16px rgba(56, 189, 248, 0.5);
+      --success: #10b981;
+      --danger: #f43f5e;
+      --warning: #f59e0b;
+      --warning-glow: 0 0 16px rgba(245, 158, 11, 0.4);
+      --text: #f8fafc;
+      --text-muted: #73849f;
+      --radius: 20px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background-color: var(--bg); color: var(--text); min-height: 100vh; padding: 1.2rem; display: flex; justify-content: center; }
+    .container { width: 100%; max-width: 980px; padding-bottom: 5rem; }
+
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px; }
+    .brand h1 { font-size: 1.35rem; font-weight: 800; color: var(--accent); letter-spacing: -0.5px; text-shadow: var(--accent-glow); }
+    .brand span { font-size: 0.72rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+
+    .header-badges { display: flex; gap: 8px; align-items: center; }
+    .clay-badge {
+      display: inline-flex; align-items: center; gap: 8px; padding: 0.5rem 1rem; border-radius: 9999px;
+      background: var(--clay-surface); box-shadow: var(--clay-shadow-out), var(--clay-shadow-inset);
+      font-size: 0.75rem; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+    }
+    .badge-dot { width: 9px; height: 9px; border-radius: 50%; }
+    .badge-dot.online { background: var(--success); box-shadow: 0 0 10px var(--success); }
+    .badge-dot.offline { background: var(--danger); box-shadow: 0 0 10px var(--danger); }
+
+    #alarmBanner {
+      display: none; background: #26111a; border-radius: var(--radius); padding: 1.2rem 1.4rem; margin-bottom: 1.5rem;
+      box-shadow: 0 0 25px rgba(244, 63, 94, 0.4), var(--clay-shadow-inset); border: 1px solid rgba(244, 63, 94, 0.4);
+      justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+    }
+
+    .clay-card {
+      background: var(--clay-surface); border-radius: var(--radius); padding: 1.35rem;
+      box-shadow: var(--clay-shadow-out), var(--clay-shadow-inset); margin-bottom: 1.5rem; border: 1px solid rgba(255, 255, 255, 0.03);
+    }
+    .card-title {
+      font-size: 0.78rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.1em; margin-bottom: 1.1rem; display: flex; justify-content: space-between; align-items: center;
+    }
+
+    .quick-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
+    .clay-btn {
+      background: var(--clay-surface); border: none; border-radius: 14px; padding: 0.85rem 0.6rem;
+      color: var(--text); font-weight: 700; font-size: 0.82rem; cursor: pointer; transition: all 0.12s ease;
+      box-shadow: var(--clay-shadow-out), var(--clay-shadow-inset); display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .clay-btn:active { box-shadow: var(--clay-pressed); transform: scale(0.98); }
+    .clay-btn.accent { color: var(--accent); }
+    .clay-btn.danger { color: var(--danger); }
+
+    .relay-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.9rem; }
+    .clay-relay-item {
+      background: var(--clay-surface); border-radius: 16px; padding: 1rem;
+      box-shadow: var(--clay-shadow-out), var(--clay-shadow-inset); display: flex; justify-content: space-between; align-items: center;
+      transition: all 0.15s ease; border: 1px solid transparent;
+    }
+    .clay-relay-item.active {
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.25), var(--clay-shadow-inset);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+    }
+    .clay-relay-item.syncing {
+      box-shadow: var(--warning-glow), var(--clay-shadow-inset) !important;
+      border: 1px solid var(--warning) !important;
+    }
+    .relay-title { font-size: 0.92rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+
+    .clay-switch-btn {
+      position: relative; width: 50px; height: 26px; border-radius: 9999px;
+      box-shadow: var(--clay-pressed); background: #0c1220; cursor: pointer; border: none; outline: none; padding: 0;
+    }
+    .clay-switch-thumb {
+      position: absolute; height: 18px; width: 18px; left: 4px; top: 4px;
+      background: #73849f; border-radius: 50%; transition: 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.5); pointer-events: none;
+    }
+    .clay-relay-item.active .clay-switch-thumb {
+      transform: translateX(24px); background: var(--accent); box-shadow: var(--accent-glow);
+    }
+    .clay-relay-item.syncing .clay-switch-thumb {
+      background: var(--warning) !important; box-shadow: var(--warning-glow) !important;
+    }
+
+    .clay-list-item {
+      background: var(--clay-surface); border-radius: 14px; padding: 0.9rem 1.1rem;
+      box-shadow: var(--clay-shadow-out), var(--clay-shadow-inset); display: flex; justify-content: space-between;
+      align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 10px;
+    }
+    .item-title { font-weight: 700; font-size: 0.92rem; display: flex; align-items: center; gap: 8px; }
+    .item-sub { font-size: 0.72rem; color: var(--text-muted); margin-top: 3px; font-family: 'JetBrains Mono', monospace; }
+
+    .scenes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0.9rem; }
+    .scene-card {
+      background: var(--clay-surface); border-radius: 16px; padding: 1.1rem;
+      box-shadow: var(--clay-shadow-out), var(--clay-shadow-inset); border: 1px solid rgba(255,255,255,0.03);
+      display: flex; flex-direction: column; justify-content: space-between; gap: 12px;
+    }
+
+    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 0.85rem; margin-bottom: 1.2rem; }
+    .clay-metric-tile {
+      background: var(--clay-surface); border-radius: 16px; padding: 1rem;
+      box-shadow: var(--clay-shadow-out), var(--clay-shadow-inset);
+    }
+    .metric-header { font-size: 0.68rem; font-weight: 700; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+    .metric-value { font-size: 1.35rem; font-weight: 800; margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
+    .metric-sub { font-size: 0.72rem; color: var(--text-muted); margin-top: 3px; }
+
+    .siri-pill {
+      background: #0f172a; border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 12px;
+      padding: 0.8rem 1rem; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem;
+      color: #94a3b8; display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem;
+    }
+
+    #modalOverlay {
+      position: fixed; inset: 0; background: rgba(5, 8, 17, 0.85); backdrop-filter: blur(12px);
+      z-index: 9999; display: none; align-items: center; justify-content: center; padding: 1rem;
+    }
+    .clay-modal {
+      background: var(--clay-surface); border-radius: 24px; width: 100%; max-width: 520px;
+      padding: 1.5rem; box-shadow: 0 25px 60px rgba(0,0,0,0.9), var(--clay-shadow-inset);
+      max-height: 85vh; overflow-y: auto;
+    }
+    .input-group { margin-bottom: 0.95rem; }
+    .input-group label { display: block; font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.35rem; }
+    .input-group input, .input-group select {
+      width: 100%; padding: 0.8rem; background: #0c1220; border: none; border-radius: 12px;
+      color: #fff; box-shadow: var(--clay-pressed); font-family: inherit; font-size: 0.9rem;
+    }
+    .multi-device-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 6px; }
+    .scene-relay-select { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+    .btn-row { display: flex; gap: 0.8rem; margin-top: 1.2rem; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="brand">
+        <h1>MADILU // CLOUD COMMAND</h1>
+        <span>V6.5 PRO ZERO-LATENCY</span>
+      </div>
+      <div class="header-badges">
+        <div class="clay-badge">
+          <span class="badge-dot online" id="statusDot"></span>
+          <span id="badgeText">CONNECTED</span>
+        </div>
+        <div class="clay-badge" style="color:var(--text-muted);font-size:0.7rem;" id="lastSyncBadge">
+          SYNC: LIVE
+        </div>
+      </div>
+    </header>
+
+    <div id="alarmBanner">
+      <div>
+        <div style="font-size:1.1rem;font-weight:800;color:var(--danger);" id="alarmReason">🚨 ALARM SOUNDING!</div>
+        <div style="font-size:0.75rem;color:#fecdd3;margin-top:2px;">Silenced from cloud, local portal, Siri, or physical buttons.</div>
+      </div>
+      <button class="clay-btn" style="background:#f43f5e;color:#fff;" id="btnSilence">🔕 SILENCE ALARM</button>
+    </div>
+
+    <div class="quick-actions">
+      <button class="clay-btn accent" id="btnStagger">⚡ Stagger Sweep</button>
+      <button class="clay-btn" id="btnAllOn">💡 All On</button>
+      <button class="clay-btn" id="btnAllOff">🌙 All Off</button>
+      <button class="clay-btn" id="btnLiving">🛋️ Living (1-4)</button>
+      <button class="clay-btn" id="btnWork">💼 Work (1-2)</button>
+      <button class="clay-btn accent" id="btnTone">🎵 Cycle Tone</button>
+    </div>
+
+    <div class="clay-card">
+      <div class="card-title">
+        <span>10-Channel Relay Pods</span>
+        <span style="color:var(--accent);font-family:'JetBrains Mono';">IDEMPOTENT LATCH</span>
+      </div>
+      <div class="relay-grid" id="relaysContainer"></div>
+    </div>
+
+    <!-- Scenes Pod -->
+    <div class="clay-card">
+      <div class="card-title">
+        <span>Custom Scenes</span>
+        <button class="clay-btn accent" style="padding:4px 10px;font-size:0.75rem;" onclick="window.openNewSceneModal()">+ CREATE SCENE</button>
+      </div>
+      <div class="scenes-grid" id="scenesContainer"></div>
+    </div>
+
+    <!-- Precision Alarms Pod -->
+    <div class="clay-card">
+      <div class="card-title">
+        <span>Multi-Alarm Engine (Flash Persist)</span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span id="nextAlarmBadge" style="color:var(--warning);font-family:'JetBrains Mono';">NEXT: NO ALARM</span>
+          <button class="clay-btn accent" style="padding:4px 10px;font-size:0.75rem;" onclick="window.openNewAlarmModal()">+ ADD ALARM</button>
+        </div>
+      </div>
+      <div id="alarmsContainer"></div>
+    </div>
+
+    <!-- Automations & Schedules Pod -->
+    <div class="clay-card">
+      <div class="card-title">
+        <span>Event Automations & Schedules</span>
+        <button class="clay-btn accent" style="padding:4px 10px;font-size:0.75rem;" onclick="window.openNewAutoModal()">+ ADD AUTOMATION</button>
+      </div>
+      <div id="automationsContainer"></div>
+    </div>
+
+    <!-- Telemetry Pod -->
+    <div class="clay-card">
+      <div class="card-title">
+        <span>Atmosphere & Inverted LDR Telemetry</span>
+        <span id="liveTimestamp" style="color:var(--text-muted);font-family:'JetBrains Mono';">10-MIN BUFFER</span>
+      </div>
+      <div class="metric-grid">
+        <div class="clay-metric-tile">
+          <div class="metric-header">TEMPERATURE</div>
+          <div class="metric-value" id="tempVal">--</div>
+          <div class="metric-sub" id="wmoDesc">--</div>
+        </div>
+        <div class="clay-metric-tile">
+          <div class="metric-header">HUMIDITY</div>
+          <div class="metric-value" id="humVal">--</div>
+          <div class="metric-sub">Open-Meteo (1m)</div>
+        </div>
+        <div class="clay-metric-tile">
+          <div class="metric-header">LIGHT LEVEL</div>
+          <div class="metric-value" style="font-size:1.15rem;" id="ldrVal">--</div>
+          <div class="metric-sub" id="ldrRaw">ADC: --</div>
+        </div>
+        <div class="clay-metric-tile">
+          <div class="metric-header">PIR RADAR</div>
+          <div class="metric-value" style="font-size:1.15rem;" id="pirVal">--</div>
+          <div class="metric-sub">Motion Trigger</div>
+        </div>
+      </div>
+
+      <div style="height:160px;width:100%;margin-top:1rem;">
+        <canvas id="tempChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Siri Voice Helper -->
+    <div class="clay-card">
+      <div class="card-title">
+        <span>Universal Siri Shortcuts Voice URL</span>
+        <span style="color:var(--success);font-family:'JetBrains Mono';">VOICE ACTIVE</span>
+      </div>
+      <div style="font-size:0.75rem;color:var(--text-muted);line-height:1.5;">
+        Single Universal Siri Shortcut URL (Passes speech text directly to ESP32):
+      </div>
+      <div class="siri-pill">
+        <span>http://192.168.31.67/siri?q=[Shortcut Input]</span>
+        <button class="clay-btn" style="padding:4px 8px;font-size:0.65rem;" onclick="navigator.clipboard.writeText('http://192.168.31.67/siri?q=')">COPY</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalOverlay">
+    <div class="clay-modal" id="modalBox">
+      <h3 style="margin-bottom:1rem;color:var(--accent);" id="modalHeading">Edit Setting</h3>
+      <div id="modalDynamicBody"></div>
+      <div class="btn-row">
+        <button class="clay-btn" style="flex:1;" onclick="closeModal()">Cancel</button>
+        <button class="clay-btn accent" style="flex:1;" id="btnModalSave">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getDatabase, ref, set, update, remove, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAm16cSVG5SEFxZSZ8qy0m9c-ZayRvBVU8",
+      authDomain: "madiluiot.firebaseapp.com",
+      databaseURL: "https://madiluiot-default-rtdb.firebaseio.com",
+      projectId: "madiluiot",
+      storageBucket: "madiluiot.firebasestorage.app",
+      messagingSenderId: "112197439595",
+      appId: "1:112197439595:web:402a7fa65b9ab7cdfde12e"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    signInWithEmailAndPassword(auth, "madilu.device@gmail.com", "Kaushalll@241211").catch(err => {
+      console.error("Firebase auth error:", err);
+    });
+
+    let modalType = "";
+    let modalTargetId = "";
+
+    const toneNames = ["Classic Beeps", "Melodic Escalation", "Cyber Warble", "Two-Tone Pulse", "Rapid Staccato"];
+    const triggerNames = [
+      "Motion Started", "Motion Stopped", "Pitch Dark (Inverted > Thresh)",
+      "Bright Sun (Inverted < Thresh)", "Temp Exceeds (> Thresh °C)", "Temp Drops (< Thresh °C)",
+      "Humidity Exceeds (> Thresh %)", "Humidity Drops (< Thresh %)", "Schedule (Time of Day)"
+    ];
+    const actionNames = ["Turn ON Target Relays", "Turn OFF Target Relays", "Sound Buzzer Pip"];
+
+    const reportedStates = new Array(11).fill(false);
+    const desiredPendingStates = new Array(11).fill(null);
+    const debounceTimers = {};
+
+    const relaysMount = document.getElementById("relaysContainer");
+    for (let i = 1; i <= 10; i++) {
+      const div = document.createElement("div");
+      div.className = "clay-relay-item";
+      div.id = `relayPod${i}`;
+      div.innerHTML = `
+        <div>
+          <div class="relay-title" onclick="window.renameRelay(${i-1})">
+            <span id="relayName${i}">Relay ${i}</span> ✏️
+          </div>
+          <div style="font-size:0.7rem;color:var(--text-muted);font-family:'JetBrains Mono';" id="relaySub${i}">OFF</div>
+        </div>
+        <button class="clay-switch-btn" onclick="window.remoteToggleRelay(${i})">
+          <div class="clay-switch-thumb"></div>
+        </button>
+      `;
+      relaysMount.appendChild(div);
+    }
+
+    // Coalescing idempotent toggle handler
+    window.remoteToggleRelay = (idx) => {
+      const current = (desiredPendingStates[idx] !== null) ? desiredPendingStates[idx] : reportedStates[idx];
+      const target = !current;
+      desiredPendingStates[idx] = target;
+
+      const pod = document.getElementById(`relayPod${idx}`);
+      pod.classList.remove("active");
+      pod.classList.add("syncing");
+      const sub = document.getElementById(`relaySub${idx}`);
+      sub.innerText = target ? "SYNCING ON..." : "SYNCING OFF...";
+      sub.style.color = "var(--warning)";
+
+      if (debounceTimers[idx]) clearTimeout(debounceTimers[idx]);
+      debounceTimers[idx] = setTimeout(() => {
+        set(ref(db, `home/desired/relay${idx}`), target)
+          .catch(err => {
+            console.error("Relay set error:", err);
+            desiredPendingStates[idx] = null;
+          });
+      }, 45);
+    };
+
+    document.getElementById("btnAllOn").onclick = () => {
+      const updates = {};
+      for (let i = 1; i <= 10; i++) {
+        updates[`relay${i}`] = true;
+        desiredPendingStates[i] = true;
+        markSyncing(i, true);
+      }
+      update(ref(db, "home/desired"), updates);
+    };
+
+    document.getElementById("btnAllOff").onclick = () => {
+      const updates = {};
+      for (let i = 1; i <= 10; i++) {
+        updates[`relay${i}`] = false;
+        desiredPendingStates[i] = false;
+        markSyncing(i, false);
+      }
+      update(ref(db, "home/desired"), updates);
+    };
+
+    function markSyncing(i, targetState) {
+      const pod = document.getElementById(`relayPod${i}`);
+      pod.classList.remove("active");
+      pod.classList.add("syncing");
+      const sub = document.getElementById(`relaySub${i}`);
+      sub.innerText = targetState ? "SYNCING ON..." : "SYNCING OFF...";
+      sub.style.color = "var(--warning)";
+    }
+
+    document.getElementById("btnLiving").onclick = () => {
+      const updates = {};
+      for (let i = 1; i <= 10; i++) {
+        const target = (i <= 4);
+        updates[`relay${i}`] = target;
+        desiredPendingStates[i] = target;
+        markSyncing(i, target);
+      }
+      update(ref(db, "home/desired"), updates);
+    };
+
+    document.getElementById("btnWork").onclick = () => {
+      const updates = {};
+      for (let i = 1; i <= 10; i++) {
+        const target = (i <= 2);
+        updates[`relay${i}`] = target;
+        desiredPendingStates[i] = target;
+        markSyncing(i, target);
+      }
+      update(ref(db, "home/desired"), updates);
+    };
+
+    document.getElementById("btnSilence").onclick = () => {
+      set(ref(db, "home/desired/silenceAlarm"), true);
+    };
+
+    document.getElementById("btnTone").onclick = () => {
+      set(ref(db, "home/desired/cycleTone"), true);
+    };
+
+    document.getElementById("btnStagger").onclick = () => {
+      set(ref(db, "home/desired/stagger"), true);
+    };
+
+    const ctx = document.getElementById('tempChart').getContext('2d');
+    const tempChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: ['10m', '9m', '8m', '7m', '6m', '5m', '4m', '3m', '2m', 'Now'],
+        datasets: [{
+          label: '10-Min Temp (°C)',
+          data: Array(10).fill(null),
+          borderColor: '#38bdf8',
+          backgroundColor: 'rgba(56, 189, 248, 0.12)',
+          fill: true,
+          tension: 0.35,
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: '#38bdf8'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#73849f', font: { family: 'JetBrains Mono', size: 10 } } },
+          y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#73849f', font: { family: 'JetBrains Mono', size: 10 } } }
+        }
+      }
+    });
+
+    let localAlarmsCache = [];
+    let localAutosCache = {};
+    let localScenesCache = {};
+
+    onValue(ref(db, "home"), (snap) => {
+      if (!snap.exists()) return;
+      const data = snap.val();
+      const st = data.state || {};
+      const s = data.sensors || {};
+      const status = data.status || {};
+      const alerts = data.alerts || {};
+      const labels = (data.config && data.config.labels) ? data.config.labels : {};
+
+      for (let i = 1; i <= 10; i++) {
+        const val = !!st[`relay${i}`];
+        reportedStates[i] = val;
+
+        if (desiredPendingStates[i] !== null) {
+          if (desiredPendingStates[i] === val) {
+            desiredPendingStates[i] = null;
+          }
+        }
+
+        const pod = document.getElementById(`relayPod${i}`);
+        const sub = document.getElementById(`relaySub${i}`);
+
+        if (desiredPendingStates[i] === null) {
+          pod.classList.remove("syncing");
+          if (val) pod.classList.add("active"); else pod.classList.remove("active");
+          sub.innerText = val ? "ACTIVE ON" : "OFF";
+          sub.style.color = "var(--text-muted)";
+        }
+
+        if (labels[`relay${i}`]) {
+          document.getElementById(`relayName${i}`).innerText = labels[`relay${i}`];
+        }
+      }
+
+      document.getElementById("tempVal").innerText = Number(s.temperatureC || 0).toFixed(1) + " °C";
+      document.getElementById("humVal").innerText = Math.round(s.humidity || 0) + " %";
+      document.getElementById("wmoDesc").innerText = s.weatherCondition || "Cloudy";
+      document.getElementById("ldrVal").innerText = s.lightClassification || "--";
+      document.getElementById("ldrRaw").innerText = "ADC: " + (s.lightRaw || 0);
+      document.getElementById("pirVal").innerText = s.motion ? "MOTION DETECTED" : "CLEAR";
+
+      if (status.nextAlarm) document.getElementById("nextAlarmBadge").innerText = "NEXT: " + status.nextAlarm;
+
+      if (status.graph10Min && Array.isArray(status.graph10Min)) {
+        tempChart.data.datasets[0].data = status.graph10Min;
+        tempChart.update();
+      }
+
+      const almBanner = document.getElementById("alarmBanner");
+      if (alerts.alarmActive) {
+        almBanner.style.display = "flex";
+        document.getElementById("alarmReason").innerText = "🚨 " + (alerts.alarmReason || "ALARM RINGING!");
+      } else {
+        almBanner.style.display = "none";
+      }
+
+      const bDot = document.getElementById("statusDot");
+      bDot.className = status.online ? "badge-dot online" : "badge-dot offline";
+      document.getElementById("badgeText").innerText = status.online ? "ONLINE" : "OFFLINE";
+      document.getElementById("lastSyncBadge").innerText = "SYNC: " + new Date().toLocaleTimeString();
+
+      if (data.config && data.config.alarms && Array.isArray(data.config.alarms)) {
+        localAlarmsCache = data.config.alarms;
+        renderAlarms(data.config.alarms);
+      }
+
+      if (data.config && data.config.automations) {
+        localAutosCache = data.config.automations;
+        renderAutomations(data.config.automations);
+      } else {
+        localAutosCache = {};
+        renderAutomations({});
+      }
+
+      if (data.config && data.config.scenes) {
+        localScenesCache = data.config.scenes;
+        renderScenes(data.config.scenes);
+      } else {
+        localScenesCache = {};
+        renderScenes({});
+      }
+    });
+
+    function renderAlarms(alms) {
+      const ac = document.getElementById("alarmsContainer");
+      ac.innerHTML = "";
+      alms.forEach((a, i) => {
+        let tStr = `${String(a.h).padStart(2,'0')}:${String(a.m).padStart(2,'0')}`;
+        ac.innerHTML += `
+          <div class="clay-list-item">
+            <div>
+              <div class="item-title">⏰ ${a.lbl || 'Alarm ' + (i+1)} [${tStr}]</div>
+              <div class="item-sub">Tone: ${toneNames[(a.tone || 0) % 5]} | Days: ${a.days === 127 ? 'Everyday' : 'Custom'}</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button class="clay-btn" style="padding:4px 10px;font-size:0.75rem;" onclick="window.openEditAlarmModal(${i}, ${a.h}, ${a.m}, '${a.lbl||''}', ${a.mask}, ${a.tone}, ${a.days})">EDIT</button>
+              <button class="clay-btn danger" style="padding:4px 10px;font-size:0.75rem;" onclick="window.deleteAlarm(${i})">DEL</button>
+              <button class="clay-switch-btn" style="width:40px;height:22px;" onclick="window.toggleAlarm(${i}, ${!a.en})">
+                <div class="clay-switch-thumb" style="width:14px;height:14px;top:4px;${a.en ? 'transform:translateX(18px);background:var(--accent);box-shadow:var(--accent-glow);' : ''}"></div>
+              </button>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function renderAutomations(autos) {
+      const autoC = document.getElementById("automationsContainer");
+      autoC.innerHTML = "";
+      const keys = Object.keys(autos);
+      if (keys.length === 0) {
+        autoC.innerHTML = `<div style="font-size:0.8rem;color:var(--text-muted);">No automation rules created.</div>`;
+        return;
+      }
+      keys.forEach((key) => {
+        const r = autos[key];
+        let timingStr = r.allDay ? "All Day Active" : `${String(r.sh).padStart(2,'0')}:${String(r.sm).padStart(2,'0')} - ${String(r.eh).padStart(2,'0')}:${String(r.em).padStart(2,'0')}`;
+        if (r.trig === 8) {
+          timingStr = `Scheduled @ ${String(r.sh).padStart(2,'0')}:${String(r.sm).padStart(2,'0')} (${r.days === 127 ? 'Daily' : 'Selected Days'})`;
+        }
+        autoC.innerHTML += `
+          <div class="clay-list-item">
+            <div>
+              <div class="item-title">⚡ ${r.name || 'Rule'}</div>
+              <div class="item-sub">${triggerNames[r.trig]} | ${timingStr} | Dur: ${r.dur}s</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button class="clay-btn danger" style="padding:4px 10px;font-size:0.75rem;" onclick="window.deleteAuto('${key}')">DEL</button>
+              <button class="clay-switch-btn" style="width:40px;height:22px;" onclick="window.toggleAuto('${key}', ${!r.en})">
+                <div class="clay-switch-thumb" style="width:14px;height:14px;top:4px;${r.en ? 'transform:translateX(18px);background:var(--accent);box-shadow:var(--accent-glow);' : ''}"></div>
+              </button>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function renderScenes(scs) {
+      const scC = document.getElementById("scenesContainer");
+      scC.innerHTML = "";
+      const keys = Object.keys(scs);
+      if (keys.length === 0) {
+        scC.innerHTML = `<div style="font-size:0.8rem;color:var(--text-muted);grid-column:1/-1;">No scenes saved yet. Click '+ CREATE SCENE' to set one up.</div>`;
+        return;
+      }
+      keys.forEach((k) => {
+        const sc = scs[k];
+        let activeSummary = [];
+        (sc.states || []).forEach((st, idx) => {
+          if (st === 1) activeSummary.push(`R${idx+1}:ON`);
+          else if (st === 0) activeSummary.push(`R${idx+1}:OFF`);
+        });
+        const summaryText = activeSummary.length > 0 ? activeSummary.join(', ') : 'No relays changed';
+
+        scC.innerHTML += `
+          <div class="scene-card">
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div style="font-weight:700;font-size:0.95rem;color:var(--text);">🎬 ${sc.name}</div>
+                <button class="clay-btn danger" style="padding:3px 8px;font-size:0.7rem;" onclick="window.deleteScene('${k}')">DEL</button>
+              </div>
+              <div style="font-size:0.72rem;color:var(--text-muted);margin-top:6px;font-family:'JetBrains Mono';">${summaryText}</div>
+            </div>
+            <button class="clay-btn accent" onclick="window.applyScene('${k}')">▶ APPLY SCENE</button>
+          </div>
+        `;
+      });
+    }
+
+    window.toggleAlarm = (idx, en) => {
+      localAlarmsCache[idx].en = en;
+      set(ref(db, `home/config/alarms`), localAlarmsCache);
+    };
+
+    window.deleteAlarm = (idx) => {
+      localAlarmsCache[idx].en = false;
+      localAlarmsCache[idx].lbl = "Alarm " + (idx + 1);
+      set(ref(db, `home/config/alarms`), localAlarmsCache);
+    };
+
+    window.toggleAuto = (key, en) => {
+      update(ref(db, `home/config/automations/${key}`), { en: en });
+    };
+
+    window.deleteAuto = (key) => {
+      remove(ref(db, `home/config/automations/${key}`));
+    };
+
+    window.applyScene = (key) => {
+      set(ref(db, `home/desired/applyScene`), key);
+    };
+
+    window.deleteScene = (key) => {
+      if (confirm("Delete this scene?")) {
+        remove(ref(db, `home/config/scenes/${key}`));
+      }
+    };
+
+    window.renameRelay = (idx) => {
+      const cur = document.getElementById(`relayName${idx+1}`).innerText;
+      const n = prompt("Enter new name for Relay " + (idx+1), cur);
+      if (n && n.trim().length > 0) {
+        set(ref(db, `home/config/labels/relay${idx+1}`), n);
+      }
+    };
+
+    window.openNewAlarmModal = () => {
+      window.openEditAlarmModal(-1, 7, 0, "Morning Alarm", 1, 0, 127);
+    };
+
+    window.openEditAlarmModal = (slot, h, m, lbl, mask, tone, days) => {
+      modalType = "ALARM";
+      modalTargetId = slot;
+      document.getElementById("modalHeading").innerText = (slot >= 0) ? ("Configure Alarm Slot #" + (slot+1)) : "Create New Alarm";
+
+      let daysHtml = "";
+      ["S", "M", "T", "W", "T", "F", "S"].forEach((d, idx) => {
+        let chk = (days & (1 << idx)) ? "checked" : "";
+        daysHtml += `<label style="font-size:11px;flex:1;text-align:center"><input type="checkbox" class="day-c" value="${idx}" ${chk}> ${d}</label>`;
+      });
+
+      let relaysHtml = "";
+      for (let i = 0; i < 10; i++) {
+        let chk = (mask & (1 << i)) ? "checked" : "";
+        relaysHtml += `<label style="font-size:11px"><input type="checkbox" class="dchk" value="${i}" ${chk}> R${i+1}</label>`;
+      }
+
+      document.getElementById("modalDynamicBody").innerHTML = `
+        <div class="input-group"><label>Alarm Time</label><input type="time" id="mTime" value="${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}"></div>
+        <div class="input-group"><label>Label</label><input type="text" id="mLabel" value="${lbl}"></div>
+        <div class="input-group"><label>Tone Profile</label>
+          <select id="mTone">
+            ${toneNames.map((n, i) => `<option value="${i}" ${i === tone ? 'selected' : ''}>${n}</option>`).join('')}
+          </select>
+        </div>
+        <div class="input-group"><label>Active Days</label><div style="display:flex;gap:4px;">${daysHtml}</div></div>
+        <div class="input-group"><label>Target Relays</label><div class="multi-device-grid">${relaysHtml}</div></div>
+      `;
+      document.getElementById("modalOverlay").style.display = "flex";
+    };
+
+    window.openNewAutoModal = () => {
+      modalType = "AUTO";
+      document.getElementById("modalHeading").innerText = "Add Event Automation or Schedule";
+
+      let relaysHtml = "";
+      for (let i = 0; i < 10; i++) relaysHtml += `<label style="font-size:11px"><input type="checkbox" class="adchk" value="${i}"> R${i+1}</label>`;
+
+      let daysHtml = "";
+      ["S", "M", "T", "W", "T", "F", "S"].forEach((d, idx) => {
+        daysHtml += `<label style="font-size:11px;flex:1;text-align:center"><input type="checkbox" class="auto-day-c" value="${idx}" checked> ${d}</label>`;
+      });
+
+      document.getElementById("modalDynamicBody").innerHTML = `
+        <div class="input-group"><label>Rule Name</label><input type="text" id="aName" placeholder="Morning Corridor Lights"></div>
+        <div class="input-group"><label>Trigger Condition</label>
+          <select id="aTrig" onchange="window.onTriggerChanged()">
+            ${triggerNames.map((n, i) => `<option value="${i}">${n}</option>`).join('')}
+          </select>
+        </div>
+
+        <div class="input-group" id="grpThresh"><label>Sensor Threshold (Lux / °C / %)</label><input type="number" id="aThresh" value="2400"></div>
+
+        <div class="input-group"><label>Action</label>
+          <select id="aAct">${actionNames.map((n, i) => `<option value="${i}">${n}</option>`).join('')}</select>
+        </div>
+
+        <div class="input-group" id="grpAllDayWrap">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="aAllDay" onchange="window.toggleAllDayView()"> ALL DAY RUNTIME (IGNORE WINDOW)
+          </label>
+        </div>
+
+        <div id="timingSection" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div class="input-group" id="grpStart"><label id="lblStart">Start Time Window</label><input type="time" id="aStart" value="18:00"></div>
+          <div class="input-group" id="grpEnd"><label id="lblEnd">End Time Window</label><input type="time" id="aEnd" value="06:00"></div>
+        </div>
+
+        <div class="input-group" id="grpDays"><label>Active Days</label><div style="display:flex;gap:4px;">${daysHtml}</div></div>
+        <div class="input-group"><label>Auto-Off Timer (Seconds, 0=Stay On)</label><input type="number" id="aDur" value="120"></div>
+        <div class="input-group"><label>Target Relays</label><div class="multi-device-grid">${relaysHtml}</div></div>
+      `;
+      document.getElementById("modalOverlay").style.display = "flex";
+      window.onTriggerChanged();
+    };
+
+    window.onTriggerChanged = () => {
+      const trig = parseInt(document.getElementById("aTrig").value);
+      const isSched = (trig === 8);
+      document.getElementById("grpThresh").style.display = isSched ? "none" : "block";
+      document.getElementById("grpAllDayWrap").style.display = isSched ? "none" : "block";
+      document.getElementById("lblStart").innerText = isSched ? "Scheduled Time" : "Start Time Window";
+      document.getElementById("grpEnd").style.display = isSched ? "none" : "block";
+      window.toggleAllDayView();
+    };
+
+    window.toggleAllDayView = () => {
+      const trig = parseInt(document.getElementById("aTrig").value);
+      if (trig === 8) {
+        document.getElementById("timingSection").style.display = "grid";
+        return;
+      }
+      const allDay = document.getElementById("aAllDay").checked;
+      document.getElementById("timingSection").style.display = allDay ? "none" : "grid";
+    };
+
+    window.openNewSceneModal = () => {
+      modalType = "SCENE";
+      document.getElementById("modalHeading").innerText = "Create New Scene";
+
+      let rowsHtml = "";
+      for (let i = 0; i < 10; i++) {
+        rowsHtml += `
+          <div style="display:flex;justify-content:space-between;align-items:center;background:#0c1220;padding:6px 10px;border-radius:10px;">
+            <span style="font-size:0.8rem;font-weight:600;">Relay ${i+1}</span>
+            <select class="sc-r-state" data-relay="${i}" style="width:auto;padding:4px 8px;font-size:0.75rem;">
+              <option value="-1">Leave Unchanged</option>
+              <option value="1">Turn ON</option>
+              <option value="0">Turn OFF</option>
+            </select>
+          </div>
+        `;
+      }
+
+      document.getElementById("modalDynamicBody").innerHTML = `
+        <div class="input-group"><label>Scene Name</label><input type="text" id="scName" placeholder="Night Watch"></div>
+        <div class="input-group"><label>Relay Behaviors</label>
+          <div class="scene-relay-select">${rowsHtml}</div>
+        </div>
+      `;
+      document.getElementById("modalOverlay").style.display = "flex";
+    };
+
+    window.closeModal = () => { document.getElementById("modalOverlay").style.display = "none"; };
+
+    document.getElementById("btnModalSave").onclick = () => {
+      if (modalType === "ALARM") {
+        const t = document.getElementById("mTime").value.split(":");
+        const lbl = document.getElementById("mLabel").value || "Alarm";
+        const tone = parseInt(document.getElementById("mTone").value);
+        let mask = 0; document.querySelectorAll(".dchk:checked").forEach(c => { mask |= (1 << parseInt(c.value)); });
+        let days = 0; document.querySelectorAll(".day-c:checked").forEach(c => { days |= (1 << parseInt(c.value)); });
+
+        let slot = modalTargetId;
+        if (slot < 0) {
+          slot = localAlarmsCache.findIndex(a => !a.en);
+          if (slot < 0) slot = localAlarmsCache.length < 6 ? localAlarmsCache.length : 0;
+        }
+
+        const newAlarm = { en: true, h: parseInt(t[0]), m: parseInt(t[1]), lbl, mask, tone, days };
+        localAlarmsCache[slot] = newAlarm;
+
+        set(ref(db, `home/config/alarms`), localAlarmsCache).then(closeModal);
+      } else if (modalType === "AUTO") {
+        const name = document.getElementById("aName").value || "AutoRule";
+        const trig = parseInt(document.getElementById("aTrig").value);
+        const thresh = parseFloat(document.getElementById("aThresh").value) || 0.0;
+        const act = parseInt(document.getElementById("aAct").value);
+        const dur = parseInt(document.getElementById("aDur").value) || 0;
+        const allDay = document.getElementById("aAllDay").checked;
+        const st = document.getElementById("aStart").value.split(":");
+        const et = (trig === 8) ? st : document.getElementById("aEnd").value.split(":");
+        let mask = 0; document.querySelectorAll(".adchk:checked").forEach(c => { mask |= (1 << parseInt(c.value)); });
+        let days = 0; document.querySelectorAll(".auto-day-c:checked").forEach(c => { days |= (1 << parseInt(c.value)); });
+
+        const autoKey = "auto_" + Date.now();
+        const autoObj = {
+          en: true, name, trig, thresh, act, allDay,
+          sh: parseInt(st[0]), sm: parseInt(st[1]),
+          eh: parseInt(et[0]), em: parseInt(et[1]),
+          dur, mask, days
+        };
+
+        set(ref(db, `home/config/automations/${autoKey}`), autoObj).then(closeModal);
+      } else if (modalType === "SCENE") {
+        const scName = document.getElementById("scName").value || "Scene";
+        const states = Array(10).fill(-1);
+        document.querySelectorAll(".sc-r-state").forEach(s => {
+          const r = parseInt(s.getAttribute("data-relay"));
+          states[r] = parseInt(s.value);
+        });
+
+        const sceneKey = "scene_" + Date.now();
+        const sceneObj = { name: scName, states: states };
+
+        set(ref(db, `home/config/scenes/${sceneKey}`), sceneObj).then(closeModal);
+      }
+    };
+  </script>
+</body>
+</html>
